@@ -1,0 +1,5 @@
+sku,name,brand,model,barcode,gtin,batch,expiry_date,location,quantity
+ADP-001,Universal Travel Adaptor,Azara,SP-128,X000R7IJOH,,A1,,Stockroom,3
+MED-001,ChloraPrep 1mL applicators,Becton Dickinson UK Ltd,,,20885403491761,LOT-2027-A,2028-02-01,Treatment Room,60
+SAFE-001,LED desk lamp,Acme,DL-100,SAFE123,,N/A,,Office,5
+SAFE-002,Nitrile gloves,Generic,NG-200,,99999999999999,N/A,2029-01-01,Cupboard,20

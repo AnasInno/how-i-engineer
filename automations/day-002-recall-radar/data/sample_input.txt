@@ -1,0 +1,1 @@
+See data/sample_inventory.csv for the Recall Radar smoke input.

@@ -8,7 +8,5 @@ __pycache__/
 !.env.example
 *.sqlite
 *.db
-*.zip
-dist/
-data/web_*
-examples/*/dist/
+automations/day-*/.venv/
+automations/day-*/data/web_input.txt

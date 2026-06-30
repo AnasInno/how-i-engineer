@@ -1,0 +1,11 @@
+{
+  "slug": "day-002-recall-radar",
+  "created_at": "2026-06-30T01:14:17.436334+00:00",
+  "automation_path": "automations/day-002-recall-radar",
+  "verify_pass": true,
+  "x_draft": "drafts/daily-automation/day-002-recall-radar/x.md",
+  "linkedin_draft": "drafts/daily-automation/day-002-recall-radar/linkedin.md",
+  "approval_state": "approved for: publish-release, git-push, x-post, linkedin-post",
+  "external_actions_blocked_without_approval": true,
+  "git_status_scope": "daily automation lane only"
+}

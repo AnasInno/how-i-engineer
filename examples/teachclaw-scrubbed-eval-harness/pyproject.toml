@@ -1,8 +1,0 @@
-[project]
-name = "teachclaw_scrubbed_eval_harness"
-version = "0.1.0"
-description = "Public-safe TeachClaw eval harness example"
-requires-python = ">=3.10"
-
-[project.optional-dependencies]
-test = ["pytest"]

@@ -1,5 +1,0 @@
-# Action Draft
-
-- Messy note: Follow up with Sam tomorrow about the proposal
-- Send invoice draft by Friday
-- Check the contract wording

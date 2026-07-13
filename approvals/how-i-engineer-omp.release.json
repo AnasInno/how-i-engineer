@@ -1,7 +1,0 @@
-{
-  "approved": true,
-  "slug": "how-i-engineer-omp",
-  "allow": ["git-push", "linkedin-post"],
-  "approved_by": "Anas",
-  "notes": "Explicitly requested the OMP architecture update, GitHub push, and LinkedIn publication on 2026-07-13."
-}

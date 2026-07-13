@@ -1,6 +1,19 @@
 # AGENTS.md — AI Deployment Engineer Kit
 
-This repo is Anas Abdi's public AI Deployment/FDE proof kit. It now also contains the daily AI automation shipping lane.
+This repo is Anas Abdi's public engineering-system record and AI
+Deployment/FDE proof kit. It also contains the daily AI automation shipping
+lane.
+
+## OMP architecture work
+
+For changes to the engineering-system design, load only:
+
+1. `docs/how-i-engineer-omp.md`
+2. `.agents/skills/how-i-engineer-omp-harness/SKILL.md`
+3. the current files directly affected by the task
+
+Do not load the daily-automation cockpit for an OMP architecture-only task.
+Do not load every repo skill or historical document at startup.
 
 ## Load first
 
@@ -43,6 +56,18 @@ A valid daily automation:
 - Keep automations in `automations/day-XXX-slug/`.
 - Keep generated release/post drafts in `drafts/daily-automation/` unless the automation README needs them.
 - External actions are approval-gated. Build/draft/verify freely; pushing/posting needs an approval manifest.
+
+## Harness boundaries
+
+- OMP owns planning, role routing, task delegation, and handoffs.
+- One canonical lane controller owns ports, paths, services, sync, locks,
+  provenance, evidence, and guarded cleanup.
+- Drivers own realistic user interaction.
+- Deterministic verifiers own state and contract assertions.
+- Product code owns product behaviour.
+- Reuse the current isolated worktree. Create one only when starting on main.
+- Do not add a parallel launch, sync, lock, evidence, or cleanup control plane.
+- Diagnose a failure once; do not create an infinite autoreview loop.
 
 ## Approval gate
 

@@ -1,11 +1,13 @@
-# Public-safe shape of the checked-in TeachClaw OMP configuration.
 includeWorkspaceTree: false
 
 modelRoles:
   default: openai-codex/gpt-5.6-sol:low
+  smol: openai-codex/gpt-5.6-luna:low
   plan: openai-codex/gpt-5.6-sol:xhigh
+  designer: openai-codex/gpt-5.6-luna:xhigh
   task: openai-codex/gpt-5.6-luna:xhigh
   slow: openai-codex/gpt-5.6-sol:xhigh
+  advisor: openai-codex/gpt-5.6-sol:xhigh
   commit: openai-codex/gpt-5.6-luna:low
   tiny: openai-codex/gpt-5.6-luna:low
 
@@ -14,7 +16,6 @@ magicKeywords:
   workflow: true
 
 task:
-  # The TeachClaw worktree and lane controller own isolation.
   isolation:
     mode: none
   eager: preferred

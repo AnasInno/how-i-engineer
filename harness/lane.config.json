@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "requireCleanRuntimeMirror": true,
+  "runtimeFiles": [
+    "harness/omp/teachclaw.yml",
+    "harness/omp/teachclaw-extension.ts",
+    "harness/examples/demo-server.mjs"
+  ],
+  "processes": {
+    "app": {
+      "command": ["node", "harness/examples/demo-server.mjs", "--name", "app", "--port", "{appPort}", "--lane-owner", "{laneId}"],
+      "portRole": "app",
+      "healthPath": "/health"
+    },
+    "gateway": {
+      "command": ["node", "harness/examples/demo-server.mjs", "--name", "gateway", "--port", "{gatewayPort}", "--lane-owner", "{laneId}"],
+      "portRole": "gateway",
+      "healthPath": "/health"
+    }
+  }
+}

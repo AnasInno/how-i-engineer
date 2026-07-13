@@ -1,0 +1,9 @@
+{
+  "scenarioId": "public-marking-replay-shape",
+  "expected": {
+    "status": "complete",
+    "sourceFileCount": 16,
+    "frameTotal": 80,
+    "requireNoActiveJobs": true
+  }
+}

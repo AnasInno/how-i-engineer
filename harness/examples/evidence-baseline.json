@@ -1,0 +1,10 @@
+{
+  "messages": [
+    { "id": "old-user", "role": "user", "content": "old request" },
+    { "id": "old-assistant", "role": "assistant", "content": "old result" }
+  ],
+  "runs": [
+    { "runId": "old-run", "status": "complete", "sourceFileCount": 6, "frameTotal": 50 }
+  ],
+  "activeJobs": []
+}

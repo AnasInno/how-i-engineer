@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail() {
+  printf 'teachclaw-omp: %s\n' "$*" >&2
+  exit 1
+}
+
+version_at_least() {
+  local value=$1 required=$2 first
+  first=$(printf '%s\n%s\n' "$required" "$value" | sort -V | head -n 1)
+  [[ "$first" == "$required" ]]
+}
+
+create_worktree() {
+  local source_root=$1 parent=$2 stamp branch destination attempt=0
+  stamp=$(date -u '+%Y%m%dT%H%M%SZ')
+  mkdir -p "$parent"
+  while :; do
+    branch="codex/teachclaw-omp-${stamp}"
+    destination="${parent}/teachclaw-omp-${stamp}"
+    if (( attempt > 0 )); then
+      branch="${branch}-${attempt}"
+      destination="${destination}-${attempt}"
+    fi
+    if [[ ! -e "$destination" ]] && ! git -C "$source_root" show-ref --verify --quiet "refs/heads/${branch}"; then
+      git -C "$source_root" worktree add -b "$branch" "$destination" HEAD >&2
+      printf '%s\n' "$destination"
+      return 0
+    fi
+    attempt=$((attempt + 1))
+  done
+}
+
+command -v git >/dev/null 2>&1 || fail 'git is required'
+command -v node >/dev/null 2>&1 || fail 'Node is required'
+command -v omp >/dev/null 2>&1 || fail 'OMP is required'
+
+git_root=$(git rev-parse --show-toplevel 2>/dev/null) || fail 'run inside the harness repository'
+git_root=$(cd -P "$git_root" && pwd -P)
+branch=$(git -C "$git_root" branch --show-current)
+git_dir=$(git -C "$git_root" rev-parse --git-dir)
+common_git_dir=$(git -C "$git_root" rev-parse --git-common-dir)
+git_dir=$(cd "$git_root" && cd -P "$git_dir" && pwd -P)
+common_git_dir=$(cd "$git_root" && cd -P "$common_git_dir" && pwd -P)
+
+node_major=$(node -p 'process.versions.node.split(".")[0]')
+[[ "$node_major" -ge 22 ]] || fail 'Node 22 or newer is required'
+omp_version=$(omp --version 2>/dev/null | sed -E 's/[^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/' | head -n 1)
+version_at_least "$omp_version" "16.4.8" || fail "OMP ${omp_version} is too old; require 16.4.8 or newer"
+
+selected_root=$git_root
+if [[ "$git_dir" == "$common_git_dir" && "$branch" == "main" ]]; then
+  [[ -z "$(git -C "$git_root" status --porcelain)" ]] || fail 'main is dirty; commit or stash before automatic worktree creation'
+  worktree_parent=${TEACHCLAW_OMP_WORKTREE_PARENT:-"${HOME}/.local/share/teachclaw-omp-worktrees"}
+  selected_root=$(create_worktree "$git_root" "$worktree_parent")
+fi
+
+cd "$selected_root"
+node harness/scripts/lane-controller.mjs init >/dev/null
+
+workflow_prompt=false
+explicit_model=false
+for argument in "$@"; do
+  [[ "$argument" == "--model" || "$argument" == --model=* ]] && explicit_model=true
+  normalized=$(printf '%s' "$argument" | tr '[:upper:]' '[:lower:]')
+  [[ "$normalized" == *workflowz* ]] && workflow_prompt=true
+done
+
+omp_args=(
+  --cwd "$selected_root"
+  --config harness/omp/teachclaw.yml
+  --extension harness/omp/teachclaw-extension.ts
+  --no-skills
+  --no-rules
+  --approval-mode write
+  --session-dir .teachclaw-lane/omp-sessions
+)
+if [[ "$workflow_prompt" == true && "$explicit_model" == false ]]; then
+  omp_args+=(--model pi/plan)
+fi
+
+exec omp "${omp_args[@]}" "$@"

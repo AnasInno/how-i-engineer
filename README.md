@@ -4,8 +4,8 @@ This repo is the public-safe architecture of the agentic engineering system I
 use to develop and prove TeachClaw.
 
 It is not a generic prompt collection. It documents the real operating pattern:
-one isolated worktree, stock OMP for
-coordination, a thin TeachClaw extension, one deterministic lane controller,
+one isolated worktree, stock OMP for coordination, a thin TeachClaw extension,
+one deterministic lane controller,
 realistic drivers, independent verifiers, and proof that matches the product
 surface.
 
@@ -26,6 +26,37 @@ driver → product → verifier
     ↓
 surface-specific evidence + merge judgement
 ```
+
+## Run the Real Public Harness
+
+The `harness/` directory contains executable control-plane code extracted from
+the system. It uses a disposable demo server instead of TeachClaw product code,
+but the worktree, state, ownership, mirror, lock, verifier and cleanup mechanics
+are real.
+
+```bash
+make check
+```
+
+That command syntax-checks the launcher, runs the complete lane lifecycle in a
+temporary Git repo, starts and health-checks an owned process, proves explicit
+tester-lock release, exercises guarded cleanup, and verifies that stale evidence
+cannot satisfy a new run contract.
+
+Try the controller directly from a non-main branch:
+
+```bash
+node harness/scripts/lane-controller.mjs init
+node harness/scripts/lane-controller.mjs ui-seed
+node harness/scripts/lane-controller.mjs runtime-prepare
+node harness/scripts/lane-controller.mjs process-up app
+node harness/scripts/lane-controller.mjs process-status app
+node harness/scripts/lane-controller.mjs process-down app
+node harness/scripts/lane-controller.mjs cleanup
+```
+
+See [`harness/README.md`](harness/README.md) for the launcher, extension, provider
+preflight and independent verifier commands.
 
 ## The Core Boundary
 
@@ -167,8 +198,11 @@ AGENTS.md                         public agent rules
 docs/architecture.md             full ownership and execution model
 docs/proof-lanes.md              UI, PowerPoint and marking proof contracts
 docs/safety-and-ownership.md     worktree, process, path and secret guardrails
-examples/teachclaw.omp.yml       scrubbed role-routing shape
 examples/task-contract.md        bounded worker handoff format
+harness/bin/teachclaw-omp        worktree-aware OMP launcher
+harness/omp/                     real role config and typed extension
+harness/scripts/                 lane controller and proof verifiers
+harness/tests/                   executable lifecycle and safety tests
 scripts/check_public_repo.py     deterministic public-safety/structure check
 ```
 

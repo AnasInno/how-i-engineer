@@ -1,0 +1,13 @@
+{
+  "messages": [
+    { "id": "old-user", "role": "user", "content": "old request" },
+    { "id": "old-assistant", "role": "assistant", "content": "old result" },
+    { "id": "new-user", "role": "user", "content": "mark this batch" },
+    { "id": "new-assistant", "role": "assistant", "content": "completed" }
+  ],
+  "runs": [
+    { "runId": "new-run", "status": "complete", "sourceFileCount": 16, "frameTotal": 80 },
+    { "runId": "old-run", "status": "complete", "sourceFileCount": 6, "frameTotal": 50 }
+  ],
+  "activeJobs": []
+}

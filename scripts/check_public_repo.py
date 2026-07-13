@@ -8,13 +8,6 @@ ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED = {
     "README.md",
-    "AGENTS.md",
-    "docs/architecture.md",
-    "docs/proof-lanes.md",
-    "docs/safety-and-ownership.md",
-    ".agents/skills/how-i-engineer-omp-harness/SKILL.md",
-    "examples/task-contract.md",
-    "harness/README.md",
     "harness/bin/teachclaw-omp",
     "harness/lane.config.json",
     "harness/omp/teachclaw-extension.ts",
@@ -27,6 +20,7 @@ REQUIRED = {
 }
 
 FORBIDDEN_PATH_PARTS = {"automations", "daily-automation", "drafts", "runs"}
+FORBIDDEN_ROOT_PATHS = {".agents", "AGENTS.md", "docs", "examples"}
 SECRET_PATTERNS = {
     "secret-like token": re.compile(r"\b(?:sk-|gh[pousr]_)[A-Za-z0-9_-]{20,}\b"),
     "private home path": re.compile(r"/Users/[A-Za-z0-9._-]+/"),
@@ -45,8 +39,12 @@ def main() -> int:
         relative = path.relative_to(ROOT)
         if ".git" in relative.parts or not path.is_file():
             continue
+        if relative.parts[0] in FORBIDDEN_ROOT_PATHS:
+            findings.append(f"stale root documentation path: {relative}")
         if FORBIDDEN_PATH_PARTS.intersection(relative.parts):
             findings.append(f"stale daily-automation path: {relative}")
+        if path.suffix.lower() == ".md" and relative.as_posix() != "README.md":
+            findings.append(f"extra documentation file; consolidate into README.md: {relative}")
         if path.suffix.lower() not in {".json", ".md", ".mjs", ".py", ".ts", ".yml", ".yaml", ".txt"} and path.name not in {"AGENTS.md", "README.md", "Makefile", ".gitignore", "teachclaw-omp"}:
             continue
         text = path.read_text(encoding="utf-8")

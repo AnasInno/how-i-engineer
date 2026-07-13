@@ -1,47 +1,203 @@
 # How I Engineer TeachClaw with OMP
 
-This repo is the public-safe architecture of the agentic engineering system I
-use to develop and prove TeachClaw.
+This repo is a public, runnable extraction of the agentic engineering harness I
+use to develop TeachClaw.
 
-It is not a generic prompt collection. It documents the real operating pattern:
-one isolated worktree, stock OMP for coordination, a thin TeachClaw extension,
-one deterministic lane controller,
-realistic drivers, independent verifiers, and proof that matches the product
-surface.
+The main lesson is simple: the system improved when I asked language models to
+do less. Models plan, implement, navigate and judge. Deterministic software owns
+ports, paths, process lifecycle, runtime synchronisation, locks, provenance,
+assertions and cleanup.
+
+TeachClaw product code, private prompts, teacher data, fixtures, credentials and
+infrastructure remain private. The control-plane mechanics are real and
+executable.
+
+## Architecture
 
 ```text
 conversation
     ↓
-tight brief + proof contract
+brief + proof contract
     ↓
-current isolated worktree
+isolated worktree
     ↓
 OMP planner → bounded task agents → explicit handoffs
     ↓
-typed TeachClaw extension
+typed extension
     ↓
 canonical lane controller
     ↓
-driver → product → verifier
+driver → product → independent verifier
     ↓
 surface-specific evidence + merge judgement
 ```
 
-## Run the Real Public Harness
+Each layer has one owner:
 
-The `harness/` directory contains executable control-plane code extracted from
-the system. It uses a disposable demo server instead of TeachClaw product code,
-but the worktree, state, ownership, mirror, lock, verifier and cleanup mechanics
-are real.
+| Layer | Responsibility |
+| --- | --- |
+| OMP | Planning, model routing, task agents, coordination and steering |
+| Extension | Typed tools, approval tiers, branch rules and catastrophic command guards |
+| Lane controller | Worktree identity, ports, state, processes, mirrors, locks, evidence and cleanup |
+| Driver | Realistic user interaction |
+| Verifier | Deterministic assertions over saved evidence |
+| Product | Actual TeachClaw behaviour |
+
+The model performs the story. Software checks the facts.
+
+## One Worktree Is the Lane
+
+The launcher reuses the current isolated worktree. When started from clean
+primary `main`, it creates a linked feature worktree automatically. It does not
+create another checkout for UI, PowerPoint or marking proof.
+
+The worktree owns its `.teachclaw-lane/` directory, including:
+
+- stable ports derived from the worktree path;
+- atomic lane state;
+- local app and gateway process records;
+- runtime mirrors and provenance manifests;
+- fake UI fixtures;
+- logs, evidence and OMP sessions.
+
+OMP task isolation is disabled because the worktree and lane controller already
+own isolation. One task agent is the default. Parallel workers are used only for
+independent outcomes, and shared runtime phases use explicit handoffs.
+
+## Model Routing
+
+The checked-in OMP roles match the type of work:
+
+```yaml
+default: openai-codex/gpt-5.6-sol:low
+plan:    openai-codex/gpt-5.6-sol:xhigh
+task:    openai-codex/gpt-5.6-luna:xhigh
+slow:    openai-codex/gpt-5.6-sol:xhigh
+commit:  openai-codex/gpt-5.6-luna:low
+tiny:    openai-codex/gpt-5.6-luna:low
+```
+
+Strong reasoning is reserved for planning and ambiguous diagnosis. Bounded
+implementation uses the task role. Commit-shaped and tiny mechanical work uses
+cheaper roles. Setup, sync, assertions and cleanup stay deterministic.
+
+The launcher disables ambient skills and rule packs. Agents receive the smallest
+relevant task context instead of the entire repo history and every sibling
+transcript.
+
+## What the Code Actually Does
+
+### Launcher
+
+[`harness/bin/teachclaw-omp`](harness/bin/teachclaw-omp) verifies Git, Node and
+OMP; selects or creates the correct worktree; initialises lane state; then starts
+stock OMP with the checked-in config, extension and worktree-local session path.
+
+`workflowz` starts the parent through the plan role unless the user explicitly
+selects another model. Generic workers resolve through the task role.
+
+### Typed OMP extension
+
+[`harness/omp/teachclaw-extension.ts`](harness/omp/teachclaw-extension.ts)
+registers two tool families:
+
+- `teachclaw_lane` for environment and lifecycle actions;
+- `teachclaw_proof` for bounded proof drivers.
+
+It classifies actions as read, write or exec; refuses mutation on `main`;
+redacts output; and blocks catastrophic recursive deletion before the shell runs.
+
+### Lane controller
+
+[`harness/scripts/lane-controller.mjs`](harness/scripts/lane-controller.mjs) is
+the single operational state machine. It implements:
+
+- deterministic worktree-derived ports;
+- atomic state writes;
+- idempotent initialisation that refuses to orphan process ownership;
+- argument-based process startup with isolated environment values;
+- PID plus process-signature ownership checks;
+- health checks and owned shutdown;
+- clean-commit runtime mirroring with SHA-256 manifests;
+- fake UI session seeding with an exact login URL;
+- exclusive tester locks shared across worktrees;
+- explicit tester release;
+- cleanup restricted to the owned lane directory.
+
+If another script starts allocating ports, launching services, syncing runtimes,
+acquiring locks or cleaning directories, a second control plane is forming. The
+controller should be extended instead.
+
+### Destructive-command guard
+
+[`harness/scripts/destructive-guard.mjs`](harness/scripts/destructive-guard.mjs)
+parses shell segments before execution. Recursive deletion is blocked when the
+target is empty, variable-expanded, `.git`, the repo, worktree root, filesystem
+root, user root or home directory.
+
+The controller also validates its own cleanup target independently. A prompt
+rule is not treated as a filesystem safety boundary.
+
+### Provider preflight
+
+[`harness/scripts/provider-readiness.mjs`](harness/scripts/provider-readiness.mjs)
+makes one minimal request to the configured endpoint before an expensive runtime
+starts. It records model, endpoint origin, HTTP status, latency, commit, dirty
+state and lane identity. The credential and response content are never written
+to evidence.
+
+### Independent verifier
+
+[`harness/scripts/fresh-run-verifier.mjs`](harness/scripts/fresh-run-verifier.mjs)
+baselines old message and run IDs, then accepts only a new run matching the
+scenario's status, file count and assessment frame. It also checks for fresh
+teacher and assistant turns and the absence of active jobs.
+
+This prevents a convincing screenshot or stale successful run from passing a
+new proof.
+
+## Proof Shapes
+
+The private product adapters follow three public contracts:
+
+```text
+UI
+seed fake session → exact login URL → local app → desktop/mobile inspection → app down
+
+PowerPoint
+provider preflight → committed runtime mirror → local gateway → real request
+→ render actual PPTX → inspect slides → gateway down
+
+Marking
+direct check → acquire tester → sync committed worktree → local app/worker
+→ committed browser replay → save state → independent verifier
+→ local services down → tester release
+```
+
+A controller command proves environment state, not product quality. Tests,
+browser state, rendered artifacts, runtime provenance and verifier output remain
+separate evidence.
+
+## Run It
+
+Requirements: Git, Node 22+, and OMP 16.4.8+ for the full launcher. The
+deterministic controller and tests need only Git and Node.
 
 ```bash
 make check
 ```
 
-That command syntax-checks the launcher, runs the complete lane lifecycle in a
-temporary Git repo, starts and health-checks an owned process, proves explicit
-tester-lock release, exercises guarded cleanup, and verifies that stale evidence
-cannot satisfy a new run contract.
+This runs:
+
+- the public secret/path scanner;
+- launcher syntax validation;
+- a real temporary Git worktree lane;
+- process startup, health, ownership and shutdown;
+- clean-runtime mirror and dirty-worktree refusal;
+- tester lock acquisition and explicit release;
+- destructive-command guard tests;
+- local provider-preflight proof without credential persistence;
+- fresh-run acceptance and stale-run rejection.
 
 Try the controller directly from a non-main branch:
 
@@ -52,172 +208,34 @@ node harness/scripts/lane-controller.mjs runtime-prepare
 node harness/scripts/lane-controller.mjs process-up app
 node harness/scripts/lane-controller.mjs process-status app
 node harness/scripts/lane-controller.mjs process-down app
+node harness/scripts/lane-controller.mjs tester-acquire
+node harness/scripts/lane-controller.mjs tester-owner
+node harness/scripts/lane-controller.mjs tester-release
 node harness/scripts/lane-controller.mjs cleanup
 ```
 
-See [`harness/README.md`](harness/README.md) for the launcher, extension, provider
-preflight and independent verifier commands.
-
-## The Core Boundary
-
-| Layer | Owns |
-| --- | --- |
-| OMP | Conversation, planning, model routing, task agents, coordination and steering |
-| TeachClaw extension | Typed lane actions, approval tiers, main-branch mutation refusal and destructive-command guards |
-| Lane controller | Worktree identity, ports, paths, databases, services, runtime mirrors, locks, evidence and owned cleanup |
-| Driver | Realistic teacher interaction through the actual surface |
-| Verifier | Deterministic assertions over saved evidence |
-| Product code | TeachClaw behaviour, pedagogy, marking, artifacts and UI |
-
-The model performs the story. Software checks the facts.
-
-## One Worktree Is the Lane
-
-The harness does not create a new worktree for every UI or proof task.
-
-- When launched from clean primary `main`, it creates a linked feature
-  worktree automatically.
-- When already inside a linked or non-main worktree, it stays there.
-- UI, app, worker, gateway, database, browser profile, logs and evidence all
-  belong to that same lane.
-- OMP's own task isolation remains off because the TeachClaw worktree and lane
-  controller already own isolation.
-
-Task agents in one OMP session receive non-overlapping ownership. If a worker
-needs independent mutable state, it gets another linked TeachClaw worktree and
-another harness session.
-
-## Deterministic Bootstrap
-
-The real launcher does six things before OMP starts:
-
-1. verifies the supported OMP and Node runtime;
-2. chooses or creates the correct worktree;
-3. installs dependencies only when missing or unusable;
-4. initialises worktree-owned lane state;
-5. loads the checked-in OMP config and TeachClaw extension;
-6. stores OMP session evidence inside the lane.
-
-Ambient skills and rule packs are disabled. Agents load TeachClaw development
-context on a need-to-know basis rather than inheriting every skill, runbook and
-historical result.
-
-## Model Routing
-
-The checked-in role shape is deliberate:
-
-```yaml
-default:  gpt-5.6-sol low
-plan:     gpt-5.6-sol xhigh
-task:     gpt-5.6-luna xhigh
-slow:     gpt-5.6-sol xhigh
-commit:   gpt-5.6-luna low
-tiny:     gpt-5.6-luna low
-```
-
-Planning and ambiguous diagnosis receive the strongest reasoning. Bounded task
-execution gets a capable worker model. Commit-shaped and tiny mechanical work
-uses cheaper roles. Setup, synchronisation, assertions and cleanup remain
-deterministic code rather than model work.
-
-The default topology is one planner and one task agent. Parallel workers are
-used only for genuinely independent outcomes; shared runtime phases are
-serialised with explicit handoffs.
-
-## Typed Tool Surface
-
-OMP does not receive a collection of overlapping shell wrappers. The extension
-exposes the canonical controller's vocabulary:
-
-```text
-lane state      status, init
-UI              ui-seed, app-up, app-status, app-down
-gateway         gateway-prepare, gateway-up, gateway-status, gateway-down
-marking         marking-prepare, marking-local-up/down, direct-check/run
-tester          acquire, owner, sync, browser car, verify, release
-cleanup         cleanup
-```
-
-Scenario drivers such as provider readiness or a committed marking replay are
-typed separately from lifecycle actions. This prevents product-specific proof
-logic from turning the controller into a scenario engine.
-
-## The Three Proof Lanes
-
-### UI
-
-Seed a fake session, start the local app, use the exact returned login URL,
-inspect desktop and mobile states, then stop the owned app. UI proof is light
-and stays in the current worktree.
-
-### PowerPoint
-
-Check the exact provider/model route, mirror the current committed worktree into
-an isolated local gateway, make the realistic teacher request, render the
-actual PPTX, inspect the slides, then stop the owned gateway. A successful model
-reply is not artifact proof.
-
-### Marking
-
-Run the deterministic direct check first. For cross-boundary proof, acquire the
-pinned tester, sync the committed worktree, start the lane-owned local app and
-worker, drive the committed teacher replay through the real browser, save
-structured state, run the independent verifier, then stop and release every
-owned resource.
-
-The driver baselines old chat messages and marking runs. Only a new run matching
-the committed scenario can pass.
-
-## Hard Guardrails
-
-- Mutating lane actions are refused on `main`.
-- Worktree cleanup can stop or remove only state whose ownership is recorded.
-- Recursive deletion targeting the repo, worktree root, `.git`, `/`, `/Users`,
-  the home directory or unresolved variable paths is rejected.
-- Tester ownership is exclusive and released explicitly.
-- Secrets are hydrated into owned child processes from ignored trusted sources;
-  they are never copied into prompts, config, evidence or commits.
-- A controller command proves environment state, not product quality.
-- Browser, artifact, tester and live proof remain separate claims.
-
-## The Expansion Tripwire
-
-The lane controller is allowed to be substantial because it replaces several
-competing launch, sync, lock, provenance and cleanup systems. Its size is not
-permission to absorb product behaviour or scenario judgement.
-
-If a new script starts allocating ports, mirroring code, launching services,
-acquiring locks, collecting lifecycle evidence or cleaning runtime paths, a
-second control plane is forming. Extend the controller contract instead of
-adding another wrapper.
-
-## Repo Map
-
-```text
-AGENTS.md                         public agent rules
-docs/architecture.md             full ownership and execution model
-docs/proof-lanes.md              UI, PowerPoint and marking proof contracts
-docs/safety-and-ownership.md     worktree, process, path and secret guardrails
-examples/task-contract.md        bounded worker handoff format
-harness/bin/teachclaw-omp        worktree-aware OMP launcher
-harness/omp/                     real role config and typed extension
-harness/scripts/                 lane controller and proof verifiers
-harness/tests/                   executable lifecycle and safety tests
-scripts/check_public_repo.py     deterministic public-safety/structure check
-```
-
-Run the public repository check:
+Run the verifier against the included fixtures:
 
 ```bash
-make check
+node harness/scripts/fresh-run-verifier.mjs \
+  --baseline harness/examples/evidence-baseline.json \
+  --final harness/examples/evidence-final.json \
+  --scenario harness/examples/scenario.json \
+  --out /tmp/public-teachclaw-verification.json
 ```
 
-## What This Repo Does Not Publish
+## Repository Shape
 
-TeachClaw product source, private prompts, teacher or pupil data, credentials,
-runtime identities, infrastructure addresses, live evidence, browser sessions
-and exact private fixtures remain private.
+```text
+README.md                           architecture, reasoning and usage
+harness/bin/teachclaw-omp           worktree-aware launcher
+harness/omp/teachclaw.yml           OMP roles and task settings
+harness/omp/teachclaw-extension.ts  typed tools and safety gates
+harness/scripts/                    controller, guard and verifiers
+harness/examples/                   disposable runtime and evidence fixtures
+harness/tests/harness.test.mjs      deterministic integration tests
+scripts/check_public_repo.py        public boundary check
+```
 
-The useful part to open source is the engineering system: who owns what, how
-agents receive context, how environments become deterministic, how proof is
-separated, and where the system refuses to improvise.
+That is the whole public system: one explanation, one launcher, one extension,
+one controller and focused proof scripts.
